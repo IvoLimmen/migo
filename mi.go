@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +11,20 @@ import (
 
 	"github.com/beevik/etree"
 )
+
+func findSettings() (*string, error) {
+	ex, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	settingsFile := filepath.Join(ex, "..", "settings.xml")
+
+	if _, err := os.Stat(settingsFile); errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	} else {
+		return &settingsFile, nil
+	}
+}
 
 func findChangedFiles() []string {
 	output, err := exec.Command("git", "status", "-s").Output()
@@ -78,12 +93,24 @@ func main() {
 		}
 	}
 
-	for _, mod := range modules {
-		fmt.Println(mod)
+	var arguments = os.Args[1:]
+
+	// add the selected modules to the list of arguments
+	arguments = append(arguments, "-pl", modules)
+
+	// add a settings file from the parent directiry if found
+	settings, err := findSettings()
+	if err == nil {
+		fmt.Printf("SETTINGS: %s\n", *settings)
+		arguments = append(arguments, "-s", *settings)
 	}
 
-	var arguments = os.Args[1:]
-	arguments = append(arguments, "-pl", modules)
+	cmd_line := "mvn"
+	for _, arg := range arguments {
+		cmd_line = cmd_line + " " + arg
+	}
+	fmt.Printf("CMD: %s\n", cmd_line)
+
 	cmd := exec.Command("mvn", arguments...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
