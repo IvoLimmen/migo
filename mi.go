@@ -95,9 +95,6 @@ func main() {
 
 	var arguments = os.Args[1:]
 
-	// add the selected modules to the list of arguments
-	arguments = append(arguments, "-pl", modules)
-
 	// add a settings file from the parent directiry if found
 	settings, err := findSettings()
 	if err == nil {
@@ -105,7 +102,10 @@ func main() {
 		arguments = append(arguments, "-s", *settings)
 	}
 
-	cmd_line := "mvn"
+	// add the selected modules to the list of arguments
+	arguments = append(arguments, "-pl", modules)
+
+	cmd_line := "mvn -c always"
 	for _, arg := range arguments {
 		cmd_line = cmd_line + " " + arg
 	}
