@@ -40,6 +40,15 @@ func findChangedFiles() []string {
 		if parts[0] == "M" && (strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) {
 			changed_files = append(changed_files, parts[1])
 		}
+		if parts[0] == "D" && (strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) {
+			changed_files = append(changed_files, parts[1])
+		}
+		if parts[0] == "??" && (strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) {
+			changed_files = append(changed_files, parts[1])
+		}
+		if parts[0] == "RM" && ((strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) && (strings.Contains(parts[3], "/") || strings.Contains(parts[3], "\\"))) {
+			changed_files = append(changed_files, parts[1])
+		}
 	}
 
 	return changed_files
@@ -87,7 +96,7 @@ func main() {
 		if err == nil {
 			if len(modules) == 0 {
 				modules = ":" + *pom
-			} else {
+			} else if !strings.Contains(modules, *pom) {
 				modules = modules + ",:" + *pom
 			}
 		}
@@ -95,7 +104,7 @@ func main() {
 
 	var arguments = os.Args[1:]
 
-	// add a settings file from the parent directiry if found
+	// add a settings file from the parent directory if found
 	settings, err := findSettings()
 	if err == nil {
 		fmt.Printf("SETTINGS: %s\n", *settings)
