@@ -27,7 +27,7 @@ func findSettings() (*string, error) {
 }
 
 func findChangedFiles() []string {
-	output, err := exec.Command("git", "status", "-s").Output()
+	output, err := exec.Command("git", "-c", "color.ui=never", "status", "-s").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,14 +40,15 @@ func findChangedFiles() []string {
 		if parts[0] == "M" && (strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) {
 			changed_files = append(changed_files, parts[1])
 		}
-		if parts[0] == "D" && (strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) {
-			changed_files = append(changed_files, parts[1])
+		if parts[0] == "D" && (strings.Contains(parts[2], "/") || strings.Contains(parts[2], "\\")) {
+			changed_files = append(changed_files, parts[2])
 		}
 		if parts[0] == "??" && (strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) {
 			changed_files = append(changed_files, parts[1])
 		}
-		if parts[0] == "RM" && ((strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) && (strings.Contains(parts[3], "/") || strings.Contains(parts[3], "\\"))) {
-			changed_files = append(changed_files, parts[1])
+		if parts[0] == "R" && ((strings.Contains(parts[2], "/") || strings.Contains(parts[2], "\\")) && (strings.Contains(parts[4], "/") || strings.Contains(parts[4], "\\"))) {
+			changed_files = append(changed_files, parts[2])
+			changed_files = append(changed_files, parts[4])
 		}
 	}
 
@@ -89,44 +90,50 @@ func isModule(file string) bool {
 func main() {
 
 	changed_files := findChangedFiles()
-	var modules string
-	for _, file := range changed_files {
 
-		pom, err := determineModule(file)
-		if err == nil {
-			if len(modules) == 0 {
-				modules = ":" + *pom
-			} else if !strings.Contains(modules, *pom) {
-				modules = modules + ",:" + *pom
+	if len(changed_files) != 0 {
+
+		var modules string
+		for _, file := range changed_files {
+
+			pom, err := determineModule(file)
+			if err == nil {
+				if len(modules) == 0 {
+					modules = ":" + *pom
+				} else if !strings.Contains(modules, *pom) {
+					modules = modules + ",:" + *pom
+				}
 			}
 		}
-	}
 
-	var arguments = os.Args[1:]
+		var arguments = os.Args[1:]
 
-	// add a settings file from the parent directory if found
-	settings, err := findSettings()
-	if err == nil {
-		fmt.Printf("SETTINGS: %s\n", *settings)
-		arguments = append(arguments, "-s", *settings)
-	}
+		// add a settings file from the parent directory if found
+		settings, err := findSettings()
+		if err == nil {
+			fmt.Printf("SETTINGS: %s\n", *settings)
+			arguments = append(arguments, "-s", *settings)
+		}
 
-	// add the selected modules to the list of arguments
-	arguments = append(arguments, "-pl", modules)
+		// add the selected modules to the list of arguments
+		arguments = append(arguments, "-pl", modules)
 
-	cmd_line := "mvn -c always"
-	for _, arg := range arguments {
-		cmd_line = cmd_line + " " + arg
-	}
-	fmt.Printf("CMD: %s\n", cmd_line)
+		cmd_line := "mvn -c always"
+		for _, arg := range arguments {
+			cmd_line = cmd_line + " " + arg
+		}
+		fmt.Printf("CMD: %s\n", cmd_line)
 
-	cmd := exec.Command("mvn", arguments...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatal(err)
+		cmd := exec.Command("mvn", arguments...)
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := cmd.Start(); err != nil {
+			log.Fatal(err)
+		}
+		os.Stdout.ReadFrom(stdout)
+	} else {
+		fmt.Println("Nothing to do...")
 	}
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
-	os.Stdout.ReadFrom(stdout)
 }
