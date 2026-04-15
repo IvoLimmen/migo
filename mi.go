@@ -37,18 +37,10 @@ func findChangedFiles() []string {
 	for changed_file := range strings.Lines(string(output)) {
 		parts := strings.Split(strings.TrimSpace(changed_file), " ")
 
-		if parts[0] == "M" && (strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) {
-			changed_files = append(changed_files, parts[1])
-		}
-		if parts[0] == "D" && (strings.Contains(parts[2], "/") || strings.Contains(parts[2], "\\")) {
-			changed_files = append(changed_files, parts[2])
-		}
-		if parts[0] == "??" && (strings.Contains(parts[1], "/") || strings.Contains(parts[1], "\\")) {
-			changed_files = append(changed_files, parts[1])
-		}
-		if parts[0] == "R" && ((strings.Contains(parts[2], "/") || strings.Contains(parts[2], "\\")) && (strings.Contains(parts[4], "/") || strings.Contains(parts[4], "\\"))) {
-			changed_files = append(changed_files, parts[2])
-			changed_files = append(changed_files, parts[4])
+		for _, part := range parts {
+			if strings.Contains(part, "/") || strings.Contains(part, "\\") {
+				changed_files = append(changed_files, part)
+			}
 		}
 	}
 
